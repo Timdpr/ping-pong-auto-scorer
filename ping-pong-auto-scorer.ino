@@ -1,12 +1,9 @@
 /*
  * Ping Pong Auto Scorer - Tim Russell
  * TODO: 
- *  Increase rally timeout
- *  Decrease height
- *  Put on github
- *  Put on other project sites (instructables circuits, hackaday)
+ *  Tweak rally timeout - slowly increase and test
  *  Handle (as much as possible) point scored -> ball bounces on other side of table
- *  Allow 21? Allow proper ruleset?
+ *  Allow 21 / proper ruleset?
  */
 
 #include "LedControl.h"
@@ -126,13 +123,11 @@ void loop() {
       }
     }
   }
-
 //  Serial.print(points[PLAYER_1]);
 //  Serial.print(" - ");
 //  Serial.print(points[PLAYER_2]);
 //  Serial.print(" -- ");
 //  Serial.println(hitCounter);
-
 }
 
 bool checkForBotchedServe() {
@@ -200,14 +195,14 @@ void flash(byte n, bool player) {
 /** The event handler for the undo button */
 void handleEvent(AceButton* button, uint8_t eventType, uint8_t buttonState) {
   switch (eventType) {
+    // If button was single-clicked, undo last point
     case AceButton::kEventClicked:
     case AceButton::kEventReleased:
-      // If button was single-clicked, undo last point
       memcpy(points, previousPoints, 2);
       updateDisplay();
       break;
+    // If button was double-clicked, undo last point & give it to opposite player
     case AceButton::kEventDoubleClicked:
-      // If button was double-clicked, undo last point & give it to opposite player
       memcpy(points, previousPoints, 2);
       points[pointWinner]++;
       pointWinner = !pointWinner;
