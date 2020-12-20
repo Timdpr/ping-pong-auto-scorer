@@ -35,8 +35,8 @@ const byte NUMBERS[12][8] = {
 };
 
 // -- Piezoelectric sensors --
-const int PIEZO_PIN_L = A0;
-const int PIEZO_PIN_R = A1;
+const int PIEZO_PIN_L = A1;
+const int PIEZO_PIN_R = A4;
 
 int piezoLeft = 0;
 int piezoRight = 0;
@@ -57,7 +57,7 @@ unsigned long lastDetection = 0;
 byte points[2] = {0, 0};
 byte previousPoints[2] = {0, 0};
 bool pointWinner = 0;
-const int TIMEOUT_LENGTH = 1250; // ** Change timeout length here (ms) **
+const int TIMEOUT_LENGTH = 1350; // ** Change timeout length here (ms) **
 unsigned long timeoutStartTime = 0;
 bool timeoutStart = false;
 const int FLASH_DELAY = 250; // ** Change screen flash delay here (ms) **
@@ -208,7 +208,7 @@ void handleEvent(AceButton* button, uint8_t eventType, uint8_t buttonState) {
       pointWinner = !pointWinner;
       updateDisplay();
       checkForWin(pointWinner);
-      checkForWin(PLAYER_2);
+      checkForWin(!pointWinner);
       break;
   }
 }
