@@ -1,9 +1,5 @@
 /*
  * Ping Pong Auto Scorer - Tim Russell
- * TODO: 
- *  Tweak rally timeout - slowly increase and test
- *  Handle (as much as possible) point scored -> ball bounces on other side of table
- *  Allow 21 / proper ruleset?
  */
 
 #include "LedControl.h"
@@ -78,10 +74,9 @@ void setup() {
   // AceButton library setup, so we can check for click and double click
   ButtonConfig* buttonConfig = undoButton.getButtonConfig();
   buttonConfig->setEventHandler(handleEvent);
-  buttonConfig->setFeature(ButtonConfig::kFeatureDoubleClick);
-  buttonConfig->setFeature(ButtonConfig::kFeatureSuppressClickBeforeDoubleClick);
-  buttonConfig->setFeature(ButtonConfig::kFeatureSuppressAfterClick);
-  buttonConfig->setFeature(ButtonConfig::kFeatureSuppressAfterDoubleClick);
+  buttonConfig->setFeature(ButtonConfig::kFeatureLongPress);
+  buttonConfig->setFeature(ButtonConfig::kFeatureRepeatPress);
+  buttonConfig->setFeature(ButtonConfig::kFeatureSuppressAfterLongPress);
 //  Serial.begin(9600);
 }
 
@@ -115,8 +110,8 @@ void loop() {
       // If not, then **point win!**
       } else {
         memcpy(previousPoints, points, 2); // update previousPoints with current points
-        pointWinner = !(hitHistory & 1);  // update with who won the point
-        points[pointWinner]++;           // add point to opposite side of last hit
+        pointWinner = getPointWinner();   // work out who won the point
+        points[pointWinner]++;           // add point to winner's total
         resetHits();                    // reset hits
         flash(1, pointWinner);         // flash & update display
         checkForWin(pointWinner);     // and check for a win
@@ -128,6 +123,26 @@ void loop() {
 //  Serial.print(points[PLAYER_2]);
 //  Serial.print(" -- ");
 //  Serial.println(hitCounter);
+}
+
+/**
+ * Assume point winner is the opposite side to the last hit, then look through 
+ * hitHistory for double hits on that side: if there are, invert the winner
+ */
+bool getPointWinner() {
+  bool lastHit = hitHistory & 1;
+  bool pointWinner = !lastHit;
+  for (byte i = 0; i < hitCounter-1; i++) {
+    if (i > 7) {
+      break;
+    }
+    bool hit = bitRead(hitHistory, i);
+    if (hit == pointWinner && hit == lastHit) {
+      return !pointWinner;
+    }
+    lastHit = hit;
+  }
+  return pointWinner;
 }
 
 bool checkForBotchedServe() {
@@ -146,7 +161,7 @@ bool checkForBotchedServe() {
 void updateDisplay() {
   for (byte disp = 0; disp < lc.getDeviceCount(); disp++) {
     for (byte row = 0; row < 8; row++) {
-      // disp % 2 gives 0, 1, 0, 1, which is then flipped because the display is mounted wrong!
+      // disp % 2 gives 0, 1, 0, 1, which is then flipped as the display is mounted wrong!
       lc.setRow(disp, row, NUMBERS[points[!(disp % 2)]][row]);
     }
   }
@@ -160,6 +175,7 @@ void registerHit(bool player) {
   timeoutStart = true;         // start timeout, and...
   // Left shift 1 and bitwise or w/the player (0 or 1), i.e. 'push' a bit into hitHistory
   hitHistory = (hitHistory << 1) | player; // update hit history
+//  Serial.println(player);
 }
 
 void resetHits() {
@@ -195,14 +211,13 @@ void flash(byte n, bool player) {
 /** The event handler for the undo button */
 void handleEvent(AceButton* button, uint8_t eventType, uint8_t buttonState) {
   switch (eventType) {
-    // If button was single-clicked, undo last point
-    case AceButton::kEventClicked:
+    // If button was pressed, undo last point
     case AceButton::kEventReleased:
       memcpy(points, previousPoints, 2);
       updateDisplay();
       break;
-    // If button was double-clicked, undo last point & give it to opposite player
-    case AceButton::kEventDoubleClicked:
+    // If button was long-pressed (1s), undo last point & give it to opposite player
+    case AceButton::kEventLongPressed:
       memcpy(points, previousPoints, 2);
       points[pointWinner]++;
       pointWinner = !pointWinner;
